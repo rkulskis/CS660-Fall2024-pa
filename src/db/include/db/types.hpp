@@ -4,13 +4,14 @@
 #include <string>
 #include <utility>
 #include <variant>
+#include <cstdint>
 
 namespace db {
 constexpr size_t INT_SIZE = sizeof(int);
 constexpr size_t DOUBLE_SIZE = sizeof(double);
 constexpr size_t CHAR_SIZE = 64;
 
-enum class type_t { INT, CHAR, DOUBLE };
+  enum class type_t : uint8_t { INT, CHAR, DOUBLE };
 
 using field_t = std::variant<int, double, std::string>;
 

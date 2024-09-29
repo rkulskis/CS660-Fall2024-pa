@@ -16,7 +16,7 @@ void HeapFile::deleteTuple(const Iterator &it) {
 }
 
 Tuple HeapFile::getTuple(const Iterator &it) const {
-  // TODO pa2: implement
+  // TODO pa2: implement  
 }
 
 void HeapFile::next(Iterator &it) const {

@@ -17,9 +17,10 @@ public:
   const field_t &get_field(size_t i) const;
 };
 
-class TupleDesc {
-  // TODO pa2: add private members
-
+class TupleDesc {		// describes schema
+  std::vector<type_t> types;
+  std::vector<std::string> names;
+  
 public:
   TupleDesc() = default;
   /**
@@ -30,7 +31,8 @@ public:
    * @throws std::logic_error if types and names have different lengths
    * @throws std::logic_error if names are not unique
    */
-  TupleDesc(const std::vector<type_t> &types, const std::vector<std::string> &names);
+  TupleDesc(const std::vector<type_t> &types,
+	    const std::vector<std::string> &names);
 
   /**
    * @brief Check if the provided Tuple is compatible with this TupleDesc
