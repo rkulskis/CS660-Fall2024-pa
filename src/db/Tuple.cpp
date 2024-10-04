@@ -94,10 +94,10 @@ size_t TupleDesc::length() const { // length of tuple in mem=names+els
 }
 
 size_t TupleDesc::size() const {
-  return types.size();		// number of types in tuple
+  return types.size();		// number of elements in tuple
 }
 
-Tuple TupleDesc::deserialize(const uint8_t *data) const {
+Tuple TupleDesc::deserialize(const uint8_t *data) const { // fix
   size_t i, d_index=0, d_size;
   std::vector<field_t> types;
   
@@ -126,9 +126,10 @@ Tuple TupleDesc::deserialize(const uint8_t *data) const {
   return Tuple(types);
 }
 
+// 0. serialize the number of elements
 // 1. serialize the types of the elements
 // 2. serialize the elements
-// e.g. [[data types][data]]
+// e.g. [(uint8_t)num_elements, [data types], [data]]
 void TupleDesc::serialize(uint8_t *data, const Tuple &t) const {
   size_t i, d_index=0, d_size;
 
