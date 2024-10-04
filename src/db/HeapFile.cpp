@@ -9,49 +9,37 @@
 using namespace db;
 
 HeapFile::HeapFile(const std::string &name, const TupleDesc &td) : DbFile(name, td) {
-
-  // Check if the file exists
   if (std::filesystem::exists(name)) {
-    // file exists
-    std::ifstream inputFile(name, std::ios::binary | std::ios::ate);
+    std::ifstream infile(name, std::ios::binary | std::ios::ate);
 
-    if (!inputFile) {
+    if (!infile) {
       throw std::runtime_error("HeapFile::HeapFile failed to open file");
     }
+    std::streamsize fileSize = infile.tellg();
 
-
-    std::streamsize file_size = inputFile.tellg();
-
-    if (file_size == 0) {
+    if (fileSize == 0) {
       // file is empty
       this->numPages = 0;
-    }
-    else {
+    } else {
 
       // If the file is not empty, calculate the number of pages
-      this->numPages = file_size / DEFAULT_PAGE_SIZE;
+      this->numPages = fileSize / DEFAULT_PAGE_SIZE;
     }
-    inputFile.close();
-  }
-  else {
+    infile.close();
+  } else {
     // create a new file
-    std::ofstream outputFile(name, std::ios::binary);
-
-    if (!outputFile) {
+    std::ofstream outfile(name, std::ios::binary);
+    if (!outfile) {
       throw std::runtime_error("HeapFile::HeapFile failed to create file");
     }
-
-    outputFile.close();
+    outfile.close();
     this->numPages = 0;
   }
 
 }
 
 void HeapFile::insertTuple(const Tuple &t) {
-  // TODO pa2: implement
-
-  if (numPages == 0) {
-
+  if (this->numPages == 0) {
     // increment pages if no page exists
     this->numPages++;
 
@@ -63,16 +51,14 @@ void HeapFile::insertTuple(const Tuple &t) {
     // Insert the tuple into the page
     hp.insertTuple(t);
     this->writePage(*np, 0); // Write the page to disk at page 0
-  }
-
-  else {
+  } else {
     //insert tuple into last page
 
     std::unique_ptr<Page> lp = std::make_unique<Page>();
     this->readPage(*lp, this->numPages - 1);
-    HeapPage hp(*lp, this->td);
+    HeapPage heapPage(*lp, this->td);
 
-    if (hp.insertTuple(t)) {
+    if (heapPage.insertTuple(t)) {
       this->writePage(*lp, this->numPages - 1);
     }
     else {
@@ -81,9 +67,9 @@ void HeapFile::insertTuple(const Tuple &t) {
       this->numPages++;
 
       std::unique_ptr<Page> np = std::make_unique<Page>();
-      HeapPage nhp(*np, this->td);
+      HeapPage newHeapPage(*np, this->td);
 
-      if (!nhp.insertTuple(t)) {
+      if (!newHeapPage.insertTuple(t)) {
         throw std::runtime_error("HeapFile::insertTuple failed");
       }
 
@@ -99,10 +85,10 @@ void HeapFile::deleteTuple(const Iterator &it) {
   std::unique_ptr<Page> page = std::make_unique<Page>();
 
   this->readPage(*page, it.page);
-  HeapPage hp(*page, this->td);
+  HeapPage heapPage(*page, this->td);
 
   // Delete the tuple from the page
-  hp.deleteTuple(it.slot);
+  heapPage.deleteTuple(it.slot);
   this->writePage(*page, it.page);
 
 
@@ -113,12 +99,9 @@ Tuple HeapFile::getTuple(const Iterator &it) const {
   // TODO pa2: implement
 
   std::unique_ptr<Page> page = std::make_unique<Page>();
-
   this->readPage(*page, it.page);
-
-  HeapPage hp(*page, this->td);
-
-  return hp.getTuple(it.slot);
+  HeapPage heapPage(*page, this->td);
+  return heapPage.getTuple(it.slot);
 }
 
 void HeapFile::next(Iterator &it) const {
@@ -127,25 +110,23 @@ void HeapFile::next(Iterator &it) const {
   // Read the current page
   std::unique_ptr<Page> page = std::make_unique<Page>();
   this->readPage(*page, it.page);
-  HeapPage hp(*page, this->td);
+  HeapPage heapPage(*page, this->td);
 
   // point heap page to next slot
-  hp.next(it.slot);
+  heapPage.next(it.slot);
 
   //iterate through slots
-  while (it.page < this->numPages && it.slot == hp.end()) {
-
+  while (it.slot == heapPage.end() && it.page < this->numPages) {
     it.page++;
-
-    if (it.page == this->numPages) { 
-      it.slot = 0;
+    if (it.page == this->numPages) { // No more pages left
+      it.slot = 0; // End of the file
       return;
     }
 
     std::unique_ptr<Page> np = std::make_unique<Page>();
     this->readPage(*np, it.page);
-    HeapPage nhp(*np, this->td);
-    it.slot = nhp.begin();
+    HeapPage nextHeapPage(*np, this->td);
+    it.slot = nextHeapPage.begin();
   }
 }
 
@@ -153,26 +134,22 @@ Iterator HeapFile::begin() const {
   // TODO pa2: implement
 
   // get first non-empty page
-
   for (size_t page = 0; page < this->numPages; page++) {
 
     std::unique_ptr<Page> p = std::make_unique<Page>();
     this->readPage(*p, page);
-    HeapPage hp(*p, this->td);
+    HeapPage heapPage(*p, this->td);
 
-    if (hp.begin() != hp.end()){
-      return {*this, page, hp.begin()};
+    if (heapPage.begin() != heapPage.end()){
+      return {*this, page, heapPage.begin()};
     }
   }
   // return iterator
-  Iterator it = {*this, numPages, 0};
-  return it;
+  return {*this, numPages, 0};
 }
 
 Iterator HeapFile::end() const {
   // TODO pa2: implement
-  // Return the iterator
-  Iterator it = {*this, numPages, 0};
-  return it;
+  // Return the end iterator
+  return {*this, numPages, 0};
 }
-
