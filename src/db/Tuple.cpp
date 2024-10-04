@@ -99,27 +99,28 @@ size_t TupleDesc::size() const {
 
 Tuple TupleDesc::deserialize(const uint8_t *data) const {
 	size_t i,
-		d_index, d_size;
-	std::vector<field_t> types;
+		d_index=0, d_size;
+	std::vector<field_t> fields;
 
-	uint8_t num_types = data[0];
-	d_index = num_types + 1;
-
-	for (i=1; i < num_types+1; ++i) { // first byte is num_types
-		switch ((type_t)data[i]) {
+	for (i=0; i < types.size(); ++i) { // first byte is num_types
+		switch (types[i]) {
 		case type_t::INT: {
 			d_size = INT_SIZE;
-			types.push_back((int)data[d_index]);			
+			int field;
+			std::memcpy(&field, &data[d_index], d_size);
+			fields.push_back(field);
 			break;
 		}
 		case type_t::DOUBLE: {
 			d_size = DOUBLE_SIZE;
-			types.push_back((double)data[d_index]);
+			double field;
+			std::memcpy(&field, &data[d_index], d_size);
+			fields.push_back(field);
 			break;
 		}
 		case type_t::CHAR: {
 			d_size = CHAR_SIZE;
-			types.push_back(std::string(d_size, data[d_index]));
+			fields.push_back(std::string((char*)&data[d_index]));
 			break;
 		}
 		default:
@@ -129,21 +130,14 @@ Tuple TupleDesc::deserialize(const uint8_t *data) const {
 		d_index += d_size;  // Move to the next field in data
 	}
 
-	return Tuple(types);  // Return a tuple with deserialized types
+	return Tuple(fields);  // Return a tuple with deserialized fields
 }
 
-// 0. serialize the number of elements
-// 1. serialize the types of the elements
-// 2. serialize the elements
-// e.g. [(uint8_t)num_elements, [data types], [data]]
+// just serialize elements themselves since TupleDesc contains rest of info
 void TupleDesc::serialize(uint8_t *data, const Tuple &t) const {
   size_t i,
 		d_index=0, d_size;
 
-  data[d_index++] = (uint8_t)types.size();	// header says how many types
-  
-  std::memcpy(&data[d_index], types.data(), types.size()*sizeof(type_t));
-  
   for (i=0; i<types.size(); ++i) { // data
     const field_t &field = t.get_field(i);
     
