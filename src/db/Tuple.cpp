@@ -97,33 +97,39 @@ size_t TupleDesc::size() const {
   return types.size();		// number of elements in tuple
 }
 
-Tuple TupleDesc::deserialize(const uint8_t *data) const { // fix
-  size_t i, d_index=0, d_size;
-  std::vector<field_t> types;
-  
-  uint8_t num_types = data[d_index++];
-  d_index += num_types;
+Tuple TupleDesc::deserialize(const uint8_t *data) const {
+	size_t i,
+		d_index, d_size;
+	std::vector<field_t> types;
 
-  for (i=0; i<num_types; ++i) {
-    switch((type_t)data[i]) {
-    case type_t::INT:
-      d_size = sizeof(int);
-      break;
-    case type_t::DOUBLE:
-      d_size = sizeof(double);
-      break;
-    case type_t::CHAR:
-      d_size = sizeof(char);	// fix
-      break;
-    default:
-      throw std::logic_error("Unknown field type");      
-    }
+	uint8_t num_types = data[0];
+	d_index = num_types + 1;
 
-    // std::memcpy(, &data[d_index], d_size); // fix
-    d_index += d_size;
-    // types.push_back(field);
-  }
-  return Tuple(types);
+	for (i=1; i < num_types+1; ++i) { // first byte is num_types
+		switch ((type_t)data[i]) {
+		case type_t::INT: {
+			d_size = INT_SIZE;
+			types.push_back((int)data[d_index]);			
+			break;
+		}
+		case type_t::DOUBLE: {
+			d_size = DOUBLE_SIZE;
+			types.push_back((double)data[d_index]);
+			break;
+		}
+		case type_t::CHAR: {
+			d_size = CHAR_SIZE;
+			types.push_back(std::string(d_size, data[d_index]));
+			break;
+		}
+		default:
+			throw std::logic_error("Unknown field type! " + std::to_string(data[i]));
+		}
+
+		d_index += d_size;  // Move to the next field in data
+	}
+
+	return Tuple(types);  // Return a tuple with deserialized types
 }
 
 // 0. serialize the number of elements
@@ -131,7 +137,8 @@ Tuple TupleDesc::deserialize(const uint8_t *data) const { // fix
 // 2. serialize the elements
 // e.g. [(uint8_t)num_elements, [data types], [data]]
 void TupleDesc::serialize(uint8_t *data, const Tuple &t) const {
-  size_t i, d_index=0, d_size;
+  size_t i,
+		d_index=0, d_size;
 
   data[d_index++] = (uint8_t)types.size();	// header says how many types
   
@@ -143,18 +150,21 @@ void TupleDesc::serialize(uint8_t *data, const Tuple &t) const {
     switch(types[i]) {
     case type_t::INT: {
       int d = std::get<int>(field);
-      d_size = sizeof(int);
-      std::memcpy(&data[d_index], &d, d_size);      
+      d_size = INT_SIZE;
+      std::memcpy(&data[d_index], &d, d_size);
+			break;
     }
     case type_t::DOUBLE: {
       double d = std::get<double>(field);
-      d_size = sizeof(double);
-      std::memcpy(&data[d_index], &d, d_size);      
+      d_size = DOUBLE_SIZE;
+      std::memcpy(&data[d_index], &d, d_size);
+			break;
     }
     case type_t::CHAR: {
       std::string d = std::get<std::string>(field);
-      d_size = sizeof(d);
-      std::memcpy(&data[d_index], &d, d_size);
+      d_size = CHAR_SIZE;
+      std::memcpy(&data[d_index], &d, d.size());
+			break;
     }
     default:
       throw std::logic_error("Unknown field type");      

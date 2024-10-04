@@ -10,10 +10,11 @@ const TupleDesc &DbFile::getTupleDesc() const { return td; }
 
 DbFile::DbFile(const std::string &name, const TupleDesc &td)
   : name(name), td(td), fd(-1), numPages(0) {
-  fd = open(name.c_str(), O_RDWR);
+  
+  fd = open(name.c_str(), O_RDWR | O_CREAT, 0666);
 
   if (fd < 0)
-    throw std::runtime_error("Failed to open file " + name);
+    throw std::runtime_error("Failed to open or create file " + name);
 
   struct stat f_info;
   
@@ -23,6 +24,20 @@ DbFile::DbFile(const std::string &name, const TupleDesc &td)
   }
 
   numPages = (f_info.st_size + DEFAULT_PAGE_SIZE-1) / DEFAULT_PAGE_SIZE; // ceil
+  
+  if (numPages == 0) {					// empty file
+    char buffer[DEFAULT_PAGE_SIZE] = {0};
+    if (write(fd, buffer, DEFAULT_PAGE_SIZE) != DEFAULT_PAGE_SIZE) { // 1 page
+      close(fd);
+      throw std::runtime_error("Failed to write the first page to " + name);
+    }
+    numPages = 1;
+
+    if (lseek(fd, 0, SEEK_SET) < 0) { // reset position to start
+      close(fd);
+      throw std::runtime_error("Failed to reset file position for " + name);
+    }		
+  }
 }
 
 DbFile::~DbFile() {
