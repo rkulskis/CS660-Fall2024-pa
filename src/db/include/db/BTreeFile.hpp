@@ -1,5 +1,7 @@
 #pragma once
 
+#include "IndexPage.hpp"
+
 #include <db/DbFile.hpp>
 
 namespace db {
@@ -26,6 +28,7 @@ public:
    * @param t the tuple to insert
    */
   void insertTuple(const Tuple &t) override;
+  bool insertTupleRecursive(IndexPage &node, const Tuple &t);
 
   void deleteTuple(const Iterator &it) override;
 
