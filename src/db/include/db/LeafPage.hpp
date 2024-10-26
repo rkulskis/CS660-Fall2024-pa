@@ -57,6 +57,10 @@ struct LeafPage {
    * @return The tuple read from the page.
    */
   Tuple getTuple(size_t slot) const;
+	
+private:												// helpers
+	size_t findInsertPosition(int key) const;	
+	void copyTuple(size_t from, size_t to);
 };
 
 } // namespace db
