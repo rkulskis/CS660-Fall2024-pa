@@ -105,7 +105,8 @@ bool BTreeFile::insertTupleRecursive(IndexPage &node, const Tuple &t) {
     LeafPage leaf(page,td, key_index);
 
     if(leaf.insertTuple(t)) {
-        //if leaf is full we need to split it
+
+      //if leaf is full we need to split it
 
       PageId newLeafPid{name, numPages++};
       Page &newPage = buffer_pool.getPage(newLeafPid);
@@ -122,7 +123,6 @@ bool BTreeFile::insertTupleRecursive(IndexPage &node, const Tuple &t) {
     }
 
     buffer_pool.markDirty(*reinterpret_cast<PageId *>(&node));
-    return false;
   }
 }
 
@@ -132,16 +132,106 @@ void BTreeFile::deleteTuple(const Iterator &it) {
 
 Tuple BTreeFile::getTuple(const Iterator &it) const {
   // TODO pa2: implement
+
+  BufferPool &buffer_pool = getDatabase().getBufferPool();
+  PageId pid{name, it.page};
+
+  Page &page = buffer_pool.getPage(pid);
+
+  LeafPage leafPage(page, td, key_index);
+
+  return leafPage.getTuple(it.slot);
 }
 
 void BTreeFile::next(Iterator &it) const {
   // TODO pa2: implement
+
+  BufferPool &buffer_pool = getDatabase().getBufferPool();
+
+  PageId pid{name, it.page};
+  Page &page = buffer_pool.getPage(pid);
+
+  LeafPage leafPage(page, td, key_index);
+
+  size_t next_slot = it.slot+1;
+
+  if(next_slot >= leafPage.header->size) {
+    //leaf is full, go to next leaf
+
+    it.page = leafPage.header->next_leaf;
+    it.slot = 0;
+  }
+  else {
+
+    it.slot = next_slot;
+  }
+
+
 }
 
 Iterator BTreeFile::begin() const {
   // TODO pa2: implement
+
+  BufferPool &buffer_pool = getDatabase().getBufferPool();
+  PageId pid{name, root_id};
+  Page &rootPage = buffer_pool.getPage(pid);
+
+  //iterate from root to leftmost child
+  IndexPage root(rootPage);
+
+  size_t page = root_id;
+
+  while(root.header->index_children) {
+    //traverse left most child till you encounter leaf
+
+    auto leftchild = root.children[0];
+
+    PageId leftChildPid{name, leftchild};
+
+    Page &leftChildPage = buffer_pool.getPage(leftChildPid);
+
+    //update root
+    root = IndexPage(leftChildPage);
+    page = leftChildPid.page;
+  }
+
+  //return the iterator to the first tuple of the leftmost leaf (head).
+  return Iterator(*this, page, 0);
+
 }
 
 Iterator BTreeFile::end() const {
   // TODO pa2: implement
+
+  BufferPool &buffer_pool = getDatabase().getBufferPool();
+  PageId pid{name, root_id};
+  Page &rootPage = buffer_pool.getPage(pid);
+
+  //iterate to rightmost child
+  IndexPage root(rootPage);
+  size_t page = root_id;
+
+  while(root.header->index_children) {
+
+    //travesre rightmost child till you reach leaf
+
+    auto rightchild = root.children[root.header->size];
+    PageId rightChildPid{name, rightchild};
+    Page &rightChildPage = buffer_pool.getPage(rightChildPid);
+
+    //update root to rightmost child
+    root = IndexPage(rightChildPage);
+    page = rightChildPid.page;
+
+  }
+
+  auto rightchild = root.children[root.header->size];
+  PageId rightChildPid{name, rightchild};
+  Page &rightChildPage = buffer_pool.getPage(rightChildPid);
+
+  LeafPage leaf(rightChildPage, td, key_index);
+
+  return Iterator(*this, page, leaf.header->size);
+
+
 }
