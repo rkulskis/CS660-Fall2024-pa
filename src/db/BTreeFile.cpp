@@ -24,52 +24,41 @@ void BTreeFile::insertTuple(const Tuple &t) {
   Page &rootPage = buffer_pool.getPage(pid);
 
   //if root is empty, insert leaf page
-  if(rootPage.empty()) {
+  if (rootPage.empty()) {
+    LeafPage leaf(rootPage, td, key_index);
 
-    LeafPage leaf(rootPage,td,key_index);
-
-    if(leaf.insertTuple(t)) {
-
+    if (leaf.insertTuple(t)) {
       buffer_pool.markDirty(pid);
     }
-
-
-  }
-  else {
-
+  } else {
     //get the root indexpage
-
     IndexPage root(rootPage);
 
-    if(insertTupleRecursive(root, t)) {
-
+    // Check if the root page can accommodate the new tuple.
+    if (insertTupleRecursive(root, t)) {
       PageId newPid{name, numPages++};
       Page &newPage = buffer_pool.getPage(newPid);
       IndexPage newRoot(newPage);
 
       int splitKey = root.split(newRoot);
 
-      newRoot.insert(splitKey, root_id);
+      // Update new root with the original root and the new split page.
+      newRoot.insert(splitKey, pid.page);
       buffer_pool.markDirty(newPid);
-
     }
 
     buffer_pool.markDirty(pid);
   }
-
-
 }
 
 bool BTreeFile::insertTupleRecursive(IndexPage &node, const Tuple &t) {
-
   BufferPool &buffer_pool = getDatabase().getBufferPool();
 
-  if(node.header->index_children) {
-    //if the next page is an indexpage
-
+  if (node.header->index_children) {
+    // if the next page is an indexpage
     size_t child_index = 0;
 
-    while( child_index < node.header->size && t.get_field(key_index).index() >= node.keys[child_index]) {
+    while (child_index < node.header->size && t.get_field(key_index).index() >= node.keys[child_index]) {
       child_index++;
     }
 
@@ -77,37 +66,31 @@ bool BTreeFile::insertTupleRecursive(IndexPage &node, const Tuple &t) {
     Page &newPage = buffer_pool.getPage(newPid);
     IndexPage newIndexPage(newPage);
 
-    //recursively call function
-    if(insertTupleRecursive(newIndexPage, t)) {
-
-      if(node.insert(node.keys[child_index], node.children[child_index])) {
-        //index page is full, need to split it
+    // recursively call function
+    if (insertTupleRecursive(newIndexPage, t)) {
+      // If the insertion into the child node resulted in a split
+      if (node.insert(node.keys[child_index], newPid.page)) {
+        // index page is full, need to split it
         buffer_pool.markDirty(newPid);
         return true;
       }
-
-      //index page is not full
+      // index page is not full
       return false;
-
     }
-  }
-  else {
-    //child is a leaf node
-
+  } else {
+    // child is a leaf node
     size_t child_index = 0;
 
-    while( child_index < node.header->size && t.get_field(key_index).index() >= node.keys[child_index]) {
+    while (child_index < node.header->size && t.get_field(key_index).index() >= node.keys[child_index]) {
       child_index++;
     }
 
     PageId pid{name, node.children[child_index]};
     Page &page = buffer_pool.getPage(pid);
-    LeafPage leaf(page,td, key_index);
+    LeafPage leaf(page, td, key_index);
 
-    if(leaf.insertTuple(t)) {
-
-      //if leaf is full we need to split it
-
+    if (leaf.insertTuple(t)) {
+      // if leaf is full we need to split it
       PageId newLeafPid{name, numPages++};
       Page &newPage = buffer_pool.getPage(newLeafPid);
       LeafPage newLeafPage(newPage, td, key_index);
@@ -118,13 +101,12 @@ bool BTreeFile::insertTupleRecursive(IndexPage &node, const Tuple &t) {
       buffer_pool.markDirty(newLeafPid);
       buffer_pool.markDirty(*reinterpret_cast<PageId *>(&node));
       return true;
-
-
     }
-
-    buffer_pool.markDirty(*reinterpret_cast<PageId *>(&node));
+    //leafpage is not full
+    return false;
   }
 }
+
 
 void BTreeFile::deleteTuple(const Iterator &it) {
   // Do not implement
