@@ -21,11 +21,8 @@ namespace db {
 		size_t pos, i;
 		uint8_t *slot_data;
 
-		if (header->size == capacity) goto done;
-		
     k1 = std::get<int>(t.get_field(key_index));
     pos = findInsertPosition(k1);
-		printf("k1=%i; pos=%lu\n", k1, pos);
 		
 		slot_data = data + pos * td.length();
 
