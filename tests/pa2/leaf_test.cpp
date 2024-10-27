@@ -98,7 +98,8 @@ TEST(LeafTest, Update) {
   for (int i = 0; i < capacity; i++) {
     db::Tuple t = leaf.getTuple(i);
     EXPECT_EQ(t.get_field(0), db::field_t{ids[i]});
-    EXPECT_EQ(t.get_field(1), db::field_t{"orange"});
+    EXPECT_EQ(t.get_field(1), db::field_t{"orange"})
+		 << "Mismatch at index i = " << i << " for field 1";
   }
 }
 

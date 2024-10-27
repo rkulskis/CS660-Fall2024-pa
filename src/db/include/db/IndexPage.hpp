@@ -46,6 +46,9 @@ struct IndexPage {
    * @return the split key (this key is moved to the parent page)
    */
   int split(IndexPage &new_page);
+
+private:
+	size_t findInsertPosition(int key) const;
 };
 
 } // namespace db
