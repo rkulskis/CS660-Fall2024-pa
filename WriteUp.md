@@ -2,30 +2,25 @@
 
 
 # Missing/incomplete elements of code
-Nothing is missing for this assignment and it passes all the test cases
-
-# Analytical Questions
-
-
-1) Maintaining an index of a file can slow down insertions and deletions as the index needs to be updated. However, it can speed up lookups. What are some strategies to minimize the impact of index maintenance on bulk insertions and deletions? What do you need to change in the implementation to support these strategies?
-
-A. Bulk loading into the B+ trees by sorting the entries first and then constructing the B+ tree as well as using a buffering mechanism which periodically flushes data in a sorted manner into the B+ tree can help minimize the impact of index maintenance on bulk insertions.
-The effects of bulk deletions can be minimized by marking the nodes that are to be deleted and deleting them at one go when a certain threshold is reached, rather than deleting them one at a time.
-
-2) A common workload for database tables is to insert new entries with an auto-incrementing key. How can you optimize the BTreeFile for this workload?
-
-A. We can cache the rightmost leaf node because as the key auto increments, the rightmost leaf get populated, therefore by caching the values, we can reduce disk I/O. We can also delay the splitting of the right nodes, which will reduce the number of time we need to balance the tree, thereby making it more optimal.
-
-3) A common strategy employed in production systems is to maintain the internal nodes of indexes to always exist in the bufferpool (or rather, pin them to memory). Discuss why this is a good idea and if there are any implications of this strategy.
-
-A. By maintaining the internal nodes of indexes to always exist in the bufferpool, we can see an drastic reduction in disk I/O which reduces latency, we also see a improved search performance as we can quickly traverse through the b+ tree, we can also allow for bulk loading and bulk deletion and therefore this strategy is extremely beneficial.
-
+B-tree insert isn't complete, we ran out of time.
 
 # Challenges Faced:
 
 Some of the challenges we faced include:
 
 1) Using recursion to iteratively split nodes in a tree when a particular IndexPage, or LeafPage gets full.
+2) Working with iterators. E.g. for leaf and index page Ross just implemented his
+own binary search after struggling to use std::lower_bound since this requires
+the creation of an iterator.
+
+# Design descisions:
+We added last\_child\_index to IndexPageHeader since there is 1 more child slot than key slot (i.e. for < or >=). This is for use with the BTreeFile.cpp traversal.
+
+Rather than using memmove or other functions for shifting for insertion, we did
+simple array indexing to allow for more clarity of code and readability.
+
+For LeafPage we implemented some helper functions (e.g. copyTuple(), findInsertPosition(), this is the binary search) to allow for better code legibility and
+coherence.
 
 # Time spent
 Ross spent 4 hours on the following files: LeafPage.cpp and IndexPage.cpp.
