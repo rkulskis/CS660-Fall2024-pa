@@ -1,3 +1,8 @@
+# NOTE
+
+I implemented Queries and Joins (Assignment 3, 4) in my partner's
+repo: https://github.com/arunramana/CS660-Fall2024-pa/
+
 # Assignments
 
 - [Introduction](docs/README.md)
